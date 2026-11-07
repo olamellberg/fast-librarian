@@ -73,7 +73,9 @@ def _drop_series_segments(name: str, keep: set[str]) -> str:
     return " - ".join(kept) if kept else name
 
 
-EXTRA_WORD_PENALTY = 35.0
+# Extra words next to a complete title cost a little (cleanest name wins) but never reject it.
+EXTRA_WORD_PENALTY = 4.0
+EXTRA_WORDS_FLOOR = 80.0
 
 
 def _strip_author(tokens: list[str], author: str, keep: set[str]) -> list[str]:
@@ -102,29 +104,58 @@ def _contains(seq: list[str], sub: list[str]) -> bool:
     return any(seq[i : i + n] == sub for i in range(len(seq) - n + 1))
 
 
-def release_title_score(title: str, author: str, name: str) -> float:
-    """How well a release/file ``name`` is *exactly* the wanted book, 0–100.
+def _title_tokens(title: str) -> list[str]:
+    return [t for t in norm_title(title).split() if t not in _ARTICLES]
 
-    The author, format tags, years, brackets and group names are removed; whatever remains must
-    be the title. Remaining extra words are penalised, so "Dune Messiah" does not match "Dune".
-    """
-    wanted = [t for t in norm_title(title).split() if t not in _ARTICLES]
-    if not wanted:
-        return 0.0
+
+def _release_rest(wanted: list[str], author: str, name: str) -> list[str]:
+    """The words of a release name that could be title words (author, tags, series etc. removed)."""
     keep = set(wanted)
     name = _GROUP_SUFFIX.sub(r"\1", name)
     name = _drop_series_segments(name, keep)
     name = _BRACKETS.sub(" ", name)
     tokens = _strip_author(fold(name).split(), author, keep)
-    rest = [t for t in tokens if t in keep or not (t in _FILLER or t in _ARTICLES or t.isdigit())]
+    return [t for t in tokens if t in keep or not (t in _FILLER or t in _ARTICLES or t.isdigit())]
+
+
+def release_title_score(title: str, author: str, name: str) -> float:
+    """How well a release/file ``name`` matches the wanted title, 0–100.
+
+    If the whole title is in the name it matches; a few extra words (series, edition, uploader)
+    only cost a little so the cleanest name ranks first. Whether those extra words make it a
+    *different* book of the same author is decided by ``other_book_in_release``.
+    """
+    wanted = _title_tokens(title)
+    if not wanted:
+        return 0.0
+    rest = _release_rest(wanted, author, name)
     if not rest:
         return 0.0
     if _contains(rest, wanted):
-        return max(0.0, 100.0 - EXTRA_WORD_PENALTY * (len(rest) - len(wanted)))
+        return max(EXTRA_WORDS_FLOOR, 100.0 - EXTRA_WORD_PENALTY * (len(rest) - len(wanted)))
     return float(fuzz.ratio(" ".join(wanted), " ".join(rest)))
 
 
-def author_similarity(author: str, candidate: str) -> float:
+def other_book_in_release(title: str, author: str, name: str, other_titles: list[str]) -> str | None:
+    """The author's other book that ``name`` matches *more specifically* than ``title``, if any.
+
+    "Frank Herbert - Dune Messiah" contains "Dune", but it is "Dune Messiah" – a longer title by
+    the same author that is also fully in the name.
+    """
+    wanted = _title_tokens(title)
+    if not wanted:
+        return None
+    rest = _release_rest(wanted, author, name)
+    if not _contains(rest, wanted):
+        return None
+    for other in other_titles:
+        o = _title_tokens(other)
+        if len(o) > len(wanted) and _contains(rest, o):
+            return other
+    return None
+
+
+def author_similarity(author: str, candidate: str, title: str = "") -> float:
     """How well ``candidate`` contains the author's name; surname carries most weight."""
     a, c = norm_author(author), fold(candidate)
     if not a or not c:
@@ -135,6 +166,13 @@ def author_similarity(author: str, candidate: str) -> float:
         return float(fuzz.partial_ratio(a, c)) * 0.6
     if re.search(rf"\b{re.escape(a)}\b", c):
         return 100.0
+    # Surname only. "Brian Herbert" is not "Frank Herbert": a different first name right before
+    # the surname means another author.
+    given = set(parts[:-1]) | set(fold(title).split())  # "Dune Herbert": "dune" is the title
+    for m in re.finditer(rf"(\w+) {re.escape(surname)}\b", c):
+        prev = m.group(1)
+        if len(prev) > 1 and prev.isalpha() and prev not in given and prev not in _FILLER:
+            return 30.0
     return 85.0
 
 

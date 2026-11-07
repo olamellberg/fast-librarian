@@ -210,6 +210,21 @@ def search_queries(title: str, author_name: str) -> list[str]:
     return out
 
 
+async def other_titles(ctx: AppContext, session: AsyncSession, book: Book) -> list[str]:
+    """The author's other book titles, to tell a sequel from the wanted book in release names."""
+    author = book.author
+    titles = set(await session.scalars(select(Book.title).where(Book.author_id == author.id)))
+    if not author.monitored and author.ol_key:
+        # Only this book is in the library – ask OpenLibrary for the rest (cached).
+        try:
+            titles |= {
+                w.title for w in clean_works(await ctx.openlibrary.author_works(author.ol_key, cache=True))
+            }
+        except Exception as e:  # noqa: BLE001 - best effort; matching still works without it
+            log.info("could not fetch other works of %s: %s", author.name, e)
+    return sorted(t for t in titles if title_key(t) != title_key(book.title))
+
+
 async def find_releases(
     ctx: AppContext, session: AsyncSession, book: Book, settings: AppSettings
 ) -> list[Scored]:
@@ -221,6 +236,7 @@ async def find_releases(
         if releases:
             break
     blocked = set(await session.scalars(select(Blocklist.guid).where(Blocklist.book_id == book.id)))
+    others = await other_titles(ctx, session, book)
     unique = {r.guid: r for r in releases}.values()
     return rank(
         [
@@ -233,6 +249,7 @@ async def find_releases(
                 max_size_mb=settings.max_size_mb,
                 min_score=settings.min_score,
                 blocklisted=r.guid in blocked,
+                other_titles=others,
             )
             for r in unique
         ]

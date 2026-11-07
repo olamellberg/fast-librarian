@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass, field
 
 from .indexers.prowlarr import Release
-from .matching import author_similarity, fold, release_title_score
+from .matching import author_similarity, fold, other_book_in_release, release_title_score
 
 FORMATS = ("epub", "azw3", "mobi", "pdf", "azw", "fb2", "cbz", "djvu")
 _AUDIO = re.compile(r"\b(audiobook|audio book|m4b|mp3|flac|unabridged|narrated|read by|aac|ogg)\b")
@@ -46,13 +46,16 @@ def score_release(
     max_size_mb: int,
     min_score: float,
     blocklisted: bool = False,
+    other_titles: list[str] | None = None,
 ) -> Scored:
+    """Score one release. ``other_titles`` = the author's other books, used to tell a sequel
+    ("Dune Messiah") from the wanted book ("Dune") when the name contains both."""
     name = fold(release.title)
     d: dict[str, float | str] = {}
     reject: str | None = None
 
     t = release_title_score(title, author, release.title)
-    a = author_similarity(author, release.title)
+    a = author_similarity(author, release.title, title)
     d["title"] = round(t, 1)
     d["author"] = round(a, 1)
     # Title is what matters most; author confirms it.
@@ -95,6 +98,9 @@ def score_release(
         reject = reject or f"author not found in release name ({a:.0f})"
     elif t < 70:
         reject = reject or f"title does not match ({t:.0f})"
+    elif other := other_book_in_release(title, author, release.title, other_titles or []):
+        d["other_book"] = other
+        reject = reject or f"looks like another book: {other}"
 
     if blocklisted:
         reject = "blocklisted"

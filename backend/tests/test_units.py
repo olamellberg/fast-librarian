@@ -56,15 +56,23 @@ REAL_DUNE_RELEASES = {
 }
 
 
-@pytest.mark.parametrize("wanted", sorted(set(REAL_DUNE_RELEASES.values())))
-def test_release_title_score_picks_only_the_right_dune_book(wanted):
-    """Regression: every Dune sequel used to score 100 for "Dune" because it contains the word."""
+DUNE_TITLES = sorted(set(REAL_DUNE_RELEASES.values()))
+
+
+def verdict(title: str, author: str, name: str, others: list[str] = (), size_mb: float = 2):  # type: ignore[assignment]
+    """The full accept/reject decision for one release, as the app makes it."""
+    kw = {**SCORE_KW, "title": title, "author": author}
+    others = [o for o in others if o != title]
+    return score_release(_rel(name, size_mb=size_mb), **kw, other_titles=others)
+
+
+@pytest.mark.parametrize("wanted", DUNE_TITLES)
+def test_only_the_right_dune_book_is_accepted(wanted):
+    """Regression: every Dune sequel contains the word "Dune". Knowing the author's other books,
+    only the release that is exactly the wanted one may be accepted."""
     for name, actual in REAL_DUNE_RELEASES.items():
-        score = release_title_score(wanted, "Frank Herbert", name)
-        if actual == wanted:
-            assert score == 100, name
-        else:
-            assert score < 70, (wanted, name, score)
+        s = verdict(wanted, "Frank Herbert", name, DUNE_TITLES)
+        assert s.accepted is (actual == wanted), (wanted, name, s.reject_reason)
 
 
 @pytest.mark.parametrize(
@@ -72,48 +80,46 @@ def test_release_title_score_picks_only_the_right_dune_book(wanted):
     [
         ("Project Hail Mary", "Andy Weir", "Project Hail Mary by Andy Weir EPUB", True),
         ("The Hobbit", "J.R.R. Tolkien", "Tolkien - Hobbit, The (retail) epub", True),
-        (
-            "The Hobbit",
-            "J.R.R. Tolkien",
-            "J.R.R. Tolkien - The Hobbit [Deluxe Illustrated Edition] (2012)",
-            True,
-        ),
+        ("The Hobbit", "J.R.R. Tolkien", "J.R.R. Tolkien - The Hobbit [Deluxe Illustrated Edition] (2012)", True),
         ("Dune Messiah", "Frank Herbert", "Frank.Herbert.-.Dune.Messiah.epub", True),
         ("Dune", "Frank Herbert", "Herbert, Frank - Dune (Dune Chronicles 1).azw3", True),
+        ("Dune", "Frank Herbert", "Dune Herbert epub", True),  # title then surname only
         ("1984", "George Orwell", "George Orwell - 1984 (1949) epub", True),
         ("Dune Messiah", "Frank Herbert", "Frank Herbert - Children of Dune", False),
-        ("Dune", "Frank Herbert", "Frank Herbert - Dune Complete Collection 1-6 epub", False),
-        ("Dune", "Frank Herbert", "Brian Herbert - Dune House Atreides epub", False),
+        ("Dune", "Frank Herbert", "Brian Herbert - Dune House Atreides epub", False),  # other author
+        # Title + right author + extra words = fine (user feedback 2026-11)
+        ("Dune", "Frank Herbert", "Frank Herbert - Dune - Deluxe 60th Anniversary Edition - WEB epub", True),
+        ("Dune", "Frank Herbert", "Frank Herbert - Dune (Gollancz SF Masterworks) Reprint epub", True),
         # real names from Prowlarr, 2026-11-07
-        (
-            "The Girl with the Dragon Tattoo",
-            "Stieg Larsson",
-            "Girl with the Dragon Tattoo, The - Stieg Larsson-viny",
-            True,
-        ),
-        (
-            "The Girl with the Dragon Tattoo",
-            "Stieg Larsson",
-            "The Girl with a Dragon Tattoo Trilogy by Stieg Larsson",
-            False,
-        ),
+        ("The Girl with the Dragon Tattoo", "Stieg Larsson", "Girl with the Dragon Tattoo, The - Stieg Larsson-viny", True),
         ("Dune", "Frank Herbert", "Frank Herbert Dune 2020 SWEDiSH RETAiL ePub eBOOK-DECiPHER", True),
-        (
-            "Pippi Långstrump",
-            "Astrid Lindgren",
-            "Pippi Långstrump (TV-serien) 1 av 6",
-            False,
-        ),  # a TV series ("1 av 6" = episode 1 of 6)
     ],
-)
-def test_release_title_score_cases(title, author, name, ok):
-    assert (release_title_score(title, author, name) >= 70) is ok
+)  # fmt: skip
+def test_release_verdicts(title, author, name, ok):
+    s = verdict(title, author, name, DUNE_TITLES if author == "Frank Herbert" else [])
+    assert s.accepted is ok, s.reject_reason
+
+
+def test_cleanest_name_ranks_first_and_packs_last():
+    names = [
+        "Frank Herbert - Dune Complete Collection 1-6 epub",
+        "Frank Herbert - Dune - Deluxe 60th Anniversary Edition - WEB epub",
+        "Frank Herbert - Dune epub",
+    ]
+    ranked = rank([verdict("Dune", "Frank Herbert", n, DUNE_TITLES) for n in names])
+    assert [s.release.title for s in ranked] == names[::-1]
+
+
+def test_tv_series_is_rejected_by_size():
+    s = verdict("Pippi Långstrump", "Astrid Lindgren", "Pippi Långstrump (TV-serien) 1 av 6", size_mb=4400)
+    assert not s.accepted and "too large" in s.reject_reason
 
 
 def test_author_similarity():
     assert author_similarity("Frank Herbert", "Frank Herbert - Dune") == 100
     assert author_similarity("Frank Herbert", "Herbert, F. - Dune") == 85
-    assert author_similarity("Frank Herbert", "Brian Herbert & Kevin J Anderson") == 85  # surname only
+    assert author_similarity("Frank Herbert", "Dune Herbert epub", "Dune") == 85
+    assert author_similarity("Frank Herbert", "Brian Herbert & Kevin J Anderson") < 50  # another Herbert
     assert author_similarity("Frank Herbert", "Isaac Asimov - Foundation") < 50
 
 
@@ -412,4 +418,7 @@ def test_series_segments(title, name, ok):
     ],
 )
 def test_series_after_comma_or_semicolon(title, author, name, ok):
-    assert (release_title_score(title, author, name) >= 70) is ok
+    s = verdict(
+        title, author, name, DUNE_TITLES if author == "Frank Herbert" else ["House of Earth and Blood"]
+    )
+    assert s.accepted is ok, s.reject_reason

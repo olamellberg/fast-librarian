@@ -177,7 +177,7 @@ class OpenLibrary:
             else author_photo(ol_key),
         )
 
-    async def author_works(self, ol_key: str) -> list[WorkInfo]:
+    async def author_works(self, ol_key: str, cache: bool = False) -> list[WorkInfo]:
         """All works by the author (raw; run through ``clean_works``)."""
         works: list[WorkInfo] = []
         page = 1
@@ -185,7 +185,7 @@ class OpenLibrary:
             data = await self.http.get_json(
                 f"{BASE}/search.json",
                 {"author_key": ol_key, "fields": FIELDS, "limit": 500, "page": page, "sort": "old"},
-                cache=False,
+                cache=cache,
             )
             docs = (data or {}).get("docs", [])
             works += [parse_work(d) for d in docs]

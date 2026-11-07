@@ -48,6 +48,9 @@ extend-exclude = ["fastlibrarian/migrations/versions"]
 select = ["E", "F", "I", "B", "UP", "SIM", "ASYNC"]
 ignore = ["SIM105"]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]  # readable tables of real release names
+
 [tool.mypy]
 python_version = "3.12"
 ignore_missing_imports = true
