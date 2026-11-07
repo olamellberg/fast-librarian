@@ -1,0 +1,89 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --animate-shimmer: shimmer 1.4s ease-in-out infinite;
+  --animate-toast-in: toast-in 160ms ease-out;
+
+  @keyframes shimmer {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+:root {
+  color-scheme: light dark;
+  scrollbar-gutter: stable;
+  --brand-light: var(--color-indigo-600);
+  --brand-dark: var(--color-indigo-400);
+  --brand: var(--brand-light);
+  accent-color: var(--brand);
+  -webkit-tap-highlight-color: transparent;
+
+  @media (prefers-color-scheme: dark) {
+    --brand: var(--brand-dark);
+  }
+}
+
+body {
+  @apply bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
+}
+
+/* Native modal dialogs: keep scroll from chaining to the page behind. */
+dialog:modal {
+  overscroll-behavior: contain;
+}
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background: rgb(0 0 0 / 0.55);
+  backdrop-filter: blur(2px);
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-sm {
+    @apply px-2.5 py-1.5 text-xs;
+  }
+  .btn-primary {
+    @apply bg-indigo-600 text-white hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400;
+  }
+  .btn-secondary {
+    @apply bg-white text-zinc-800 ring-1 ring-zinc-300 ring-inset hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-100 dark:ring-zinc-700 dark:hover:bg-zinc-800;
+  }
+  .btn-ghost {
+    @apply text-zinc-600 hover:bg-zinc-200/70 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100;
+  }
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-500;
+  }
+  .input {
+    @apply w-full rounded-lg border-0 bg-white px-3 py-2 text-sm text-zinc-900 ring-1 ring-zinc-300 ring-inset placeholder:text-zinc-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none dark:bg-zinc-900 dark:text-zinc-100 dark:ring-zinc-700 dark:placeholder:text-zinc-500;
+  }
+  .card {
+    @apply rounded-xl bg-white ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800;
+  }
+  .skeleton {
+    @apply animate-shimmer rounded-md bg-zinc-200 dark:bg-zinc-800;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400;
+  }
+}

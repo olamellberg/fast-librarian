@@ -1,0 +1,26 @@
+# reference checkouts (not part of FastLibrarian)
+upstream/
+lsio/
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+backend/dev-migrations.db
+*.db
+*.db-wal
+*.db-shm
+
+# node
+node_modules/
+frontend/dist/
+
+# local (private notes, plans with server details)
+tasks/
+.env
+config/
+frontend/screenshots/
+.playwright-mcp/

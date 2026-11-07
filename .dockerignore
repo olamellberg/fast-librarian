@@ -1,0 +1,14 @@
+upstream
+lsio
+tasks
+**/node_modules
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+frontend/dist
+frontend/screenshots
+backend/tests
+.git
+*.db

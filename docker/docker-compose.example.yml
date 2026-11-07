@@ -1,0 +1,19 @@
+# Example service definition. Paths match a typical linuxserver.io media stack where
+# qBittorrent sees downloads at /downloads and Calibre-Web Automated watches /cwa-book-ingest.
+services:
+  fastlibrarian:
+    image: fastlibrarian:local          # built with: docker build -t fastlibrarian:local .
+    container_name: fastlibrarian
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      # - FL_AUTH_DISABLED=true         # only if an auth proxy sits in front
+    volumes:
+      - ./fastlibrarian:/config
+      - /path/to/downloads:/downloads                  # same path as qBittorrent → no path mapping
+      - /path/to/books/ingest:/cwa-book-ingest         # CWA's ingest folder
+      - /path/to/books/library:/calibre-library:ro     # CWA's Calibre library (read-only is fine)
+    ports:
+      - "8790:8790"
+    restart: unless-stopped
