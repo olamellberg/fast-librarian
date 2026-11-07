@@ -63,7 +63,12 @@ without CWA, and audiobooks. See the [roadmap](#roadmap).
 FastLibrarian does not provide or point to any content. What you download through your own
 indexers is your responsibility.
 
-## Run with Docker
+## Quick start
+
+This assumes Prowlarr, qBittorrent and Calibre-Web Automated already run in Docker on the same
+host (see [Prerequisites](#prerequisites)). Plan on about 10 minutes.
+
+### 1. Build the image
 
 ```sh
 git clone https://github.com/olamellberg/fast-librarian.git
@@ -71,25 +76,112 @@ cd fast-librarian
 docker build -t fastlibrarian:local .
 ```
 
-Add the service to your compose file. Use
-[`docker/docker-compose.example.yml`](docker/docker-compose.example.yml) as a template and
-adjust the three volume paths, then run `docker compose up -d fastlibrarian`. Open
-`http://<host>:8790`, create the admin account, then fill in **Settings**:
+### 2. Add FastLibrarian to your compose file
 
-| Setting | Typical value |
+Find the folders your other containers already use. The paths below are examples:
+
+| Folder on the host | Used by | Mount in FastLibrarian at |
+|---|---|---|
+| `/srv/downloads` | qBittorrent (as `/downloads`) | `/downloads`, the **same path** as in qBittorrent |
+| `/srv/books/ingest` | CWA (as `/cwa-book-ingest`) | `/cwa-book-ingest` |
+| `/srv/books/library` | CWA (as `/calibre-library`) | `/calibre-library:ro` |
+
+```yaml
+services:
+  fastlibrarian:
+    image: fastlibrarian:local
+    container_name: fastlibrarian
+    environment:
+      - PUID=1000          # same user/group as qBittorrent and CWA
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - ./fastlibrarian:/config                         # FastLibrarian's database and settings
+      - /srv/downloads:/downloads
+      - /srv/books/ingest:/cwa-book-ingest
+      - /srv/books/library:/calibre-library:ro
+    ports:
+      - "8790:8790"
+    restart: unless-stopped
+```
+
+Put it on the same Docker network as the other services so it can reach them by name, then run:
+
+```sh
+docker compose up -d fastlibrarian
+docker logs fastlibrarian      # should end with "Uvicorn running on http://0.0.0.0:8790"
+```
+
+### 3. Create your account
+
+Open `http://<host>:8790`. The first visit asks you to create the admin account (password at
+least 8 characters).
+
+### 4. Connect your services
+
+Go to **Settings**. Fill in each section, press **Save**, then press the section's **Test**
+button. All three should turn green.
+
+| Section | Field | Value |
+|---|---|---|
+| **Prowlarr** | URL | e.g. `http://prowlarr:9696`, as seen from the FastLibrarian container |
+| | API key | Prowlarr → *Settings → General → Security → API Key* |
+| **qBittorrent** | URL | e.g. `http://qbittorrent:8080` (the Web UI port) |
+| | Username / password | The Web UI login. Leave both empty if *Tools → Options → Web UI → Bypass authentication for clients in whitelisted IP subnets* covers the FastLibrarian container. |
+| | Category | `books`. It is created automatically if it doesn't exist. |
+| **Calibre-Web Automated** | Ingest folder | `/cwa-book-ingest` |
+| | Calibre library | `/calibre-library` |
+| | Import mode | `copy` (recommended: CWA may change files it imports, and the original keeps seeding) |
+
+If the tests show red:
+
+- **Prowlarr / qBittorrent: "cannot reach".** The URL must work *from inside the container*.
+  Use the container name or the Docker network IP, not `localhost`.
+- **qBittorrent: "login failed" or HTTP 403.** Check the username/password, or the whitelist
+  subnet.
+- **Calibre: "missing or not writable" / "no metadata.db".** Check the volume paths and that
+  `PUID`/`PGID` match the owner of the folders. CWA creates `metadata.db` on first start.
+
+### 5. Get your first book
+
+1. **Search.** Type a title, an author or an ISBN (with or without dashes) and press Enter.
+2. **Add an author.** Click *Add to library* on an author. Their books are fetched in the
+   background, which takes a few seconds for most authors.
+3. **Pick books.** On the author page you can:
+   - sort by year, title or popularity, and filter by year or status;
+   - use *Hide obscure editions* (on by default) to hide rare one-off printings;
+   - click *Download* on a book, or tick several and use *Download* in the bar at the bottom.
+4. **Follow it.** A book's status goes
+   *Wanted* → *Downloading* → *Sent to CWA* → *In library*.
+   - **Activity** shows each download, the release that was chosen and why (its score
+     breakdown).
+   - *In library* appears once CWA has imported the book; FastLibrarian checks the Calibre
+     library every 10 minutes.
+5. **Not happy with the pick?** Use the magnifier next to a book (*Search manually*) to see all
+   releases with their scores and grab a specific one.
+
+If no acceptable release is found the book becomes *Failed* with the reason, e.g.
+"No releases found". Click *Download* again to retry later. A download that turns out to be
+broken is blocklisted, and the next-best release is tried automatically.
+
+### Updating
+
+```sh
+cd fast-librarian && git pull
+docker build -t fastlibrarian:local .
+docker compose up -d fastlibrarian
+```
+
+Database migrations run automatically on start.
+
+### Configuration reference
+
+| | |
 |---|---|
-| Prowlarr URL + API key | `http://prowlarr:9696`, from Prowlarr → Settings → General |
-| qBittorrent URL (+ login unless the subnet is whitelisted) | `http://qbittorrent:8080` |
-| qBittorrent category | `books` |
-| Ingest folder | `/cwa-book-ingest` (mount CWA's ingest dir here) |
-| Calibre library | `/calibre-library` (mount CWA's library, `:ro` is fine) |
-
-Each section has a **Test** button. If qBittorrent sees downloads under a different path than
-FastLibrarian, set the path mapping (from → to). Mounting the same path in both containers is
-simplest.
-
-Environment variables: `PUID`/`PGID`/`UMASK` (file ownership), `FL_PORT` (default 8790),
-`FL_LOG_LEVEL`, and `FL_AUTH_DISABLED=true` (only behind an auth proxy).
+| Environment variables | `PUID`/`PGID`/`UMASK` (file ownership), `FL_PORT` (default 8790), `FL_LOG_LEVEL`, `FL_AUTH_DISABLED=true` (only behind an auth proxy) |
+| Path mapping | Only needed if qBittorrent sees downloads under a different path than FastLibrarian. Set *from* (qBittorrent's path) → *to* (FastLibrarian's path) in Settings → qBittorrent. |
+| Languages | Settings → Search → *Languages* (OpenLibrary codes like `eng,swe`) limits an author's book list to works published in those languages. |
+| API docs | `http://<host>:8790/api/docs` |
 
 ## Development
 
