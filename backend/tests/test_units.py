@@ -387,3 +387,29 @@ def test_series_segment_does_not_block_the_right_book():
 )
 def test_series_segments(title, name, ok):
     assert (release_title_score(title, "Rebecca Yarros", name) >= 70) is ok
+
+
+@pytest.mark.parametrize(
+    ("title", "author", "name", "ok"),
+    [
+        # reported 2026-11: series after a comma, number in parentheses
+        (
+            "House of Flame and Shadow",
+            "Sarah J. Maas",
+            "House of Flame and Shadow, Crescent City (03) by Sarah J. Maas EPUB",
+            True,
+        ),
+        (
+            "House of Earth and Blood",
+            "Sarah J. Maas",
+            "House of Flame and Shadow, Crescent City (03) by Sarah J. Maas EPUB",
+            False,
+        ),
+        ("Dune Messiah", "Frank Herbert", "Dune Messiah, Dune Chronicles (02) - Frank Herbert epub", True),
+        ("Dune", "Frank Herbert", "Dune Messiah, Dune Chronicles (02) - Frank Herbert epub", False),
+        ("Six of Crows", "Leigh Bardugo", "Leigh Bardugo - Six of Crows; Book 1 (2015) epub", True),
+        ("1984", "George Orwell", "George Orwell - 1984 (1949) epub", True),  # a year is not a series number
+    ],
+)
+def test_series_after_comma_or_semicolon(title, author, name, ok):
+    assert (release_title_score(title, author, name) >= 70) is ok

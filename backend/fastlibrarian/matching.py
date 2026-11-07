@@ -54,9 +54,10 @@ _FILLER = {
 # Scene-style group suffix: "...EPUB eBook-BitBook" / "...Retail.ePub-LiBRiCiDE"
 _GROUP_SUFFIX = re.compile(r"(?i)(e-?books?|epub|mobi|azw3|pdf|retail)[-_.]([a-z0-9]+)\s*$")
 _BRACKETS = re.compile(r"[\[({][^\])}]*[\])}]")
-# "Title - The Empyrean (#3) - Author": a dash-separated segment that carries a series number.
-_SEGMENT_SPLIT = re.compile(r"\s+[-–—]\s+")
-_SERIES_MARK = re.compile(r"(?i)#\s*\d|\b(book|bk|vol(ume)?|part|nr|no)\.?\s*\d")
+# "Title - The Empyrean (#3) - Author", "Title, Crescent City (03) by Author": a segment split off by
+# a dash, comma or semicolon that carries a series number (#3, Book 2, Vol 1, (03) – not a year).
+_SEGMENT_SPLIT = re.compile(r"\s+[-–—]\s+|\s*[,;]\s+")
+_SERIES_MARK = re.compile(r"(?i)#\s*\d|\b(book|bk|vol(ume)?|part|nr|no)\.?\s*\d|\(\s*\d{1,3}\s*\)")
 
 
 def _drop_series_segments(name: str, keep: set[str]) -> str:
