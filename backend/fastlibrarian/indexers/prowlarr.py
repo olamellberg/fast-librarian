@@ -69,8 +69,13 @@ class Prowlarr:
     async def _get(self, path: str, params: Any = None, wait: float = 30) -> Any:
         try:
             r = await self.client.get(f"{self.url}{path}", params=params, headers=self.headers, timeout=wait)
+        except httpx.TimeoutException as e:
+            raise ProwlarrError(
+                f"Prowlarr did not answer within {wait:g} s – usually one slow indexer; "
+                "check Prowlarr → System → Logs, or limit the indexers in Settings"
+            ) from e
         except httpx.TransportError as e:
-            raise ProwlarrError(f"Cannot reach Prowlarr at {self.url}: {e}") from e
+            raise ProwlarrError(f"Cannot reach Prowlarr at {self.url}: {e or type(e).__name__}") from e
         if r.status_code == 401:
             raise ProwlarrError("Prowlarr rejected the API key")
         if r.status_code >= 400:

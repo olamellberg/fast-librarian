@@ -319,3 +319,14 @@ async def test_search_errors_end_in_failed_not_stuck_wanted(logged_in, respx_moc
     st, msg = await status()
     assert st == "failed" and "503" in msg
     assert route.call_count == 3
+
+
+@respx.mock(assert_all_mocked=True, assert_all_called=False)
+async def test_prowlarr_timeout_has_a_helpful_message(logged_in, respx_mock, tmp_path):
+    h = logged_in
+    ol_router(respx_mock)
+    await configure(h, tmp_path)
+    book_id = (await h.client.post("/api/books", json={"ol_work_key": "OL893414W"})).json()["id"]
+    respx_mock.get(f"{PROWLARR}/api/v1/search").mock(side_effect=httpx.ReadTimeout(""))
+    r = await h.client.get(f"/api/books/{book_id}/releases")
+    assert r.status_code == 502 and "did not answer within" in r.json()["detail"]
