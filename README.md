@@ -33,14 +33,48 @@ FastLibrarian keeps the part most people use (ebooks via torrents into Calibre) 
   (e.g. "Dune Messiah" never matches a search for "Dune")
 - a modern, phone-friendly UI
 
+## Prerequisites
+
+FastLibrarian is **not** a standalone downloader. It is the "pick and fetch" piece in an
+existing self-hosted media stack and relies on these services, which you install and run
+yourself:
+
+| Required | What for | Notes |
+|---|---|---|
+| **Docker** (with Docker Compose) | Runs FastLibrarian | Linux x86_64 tested. There is no prebuilt image yet; you build it locally (Node and Python are only needed inside the build). |
+| **[Prowlarr](https://prowlarr.com/)** | Searches your indexers | Needs at least one **torrent** indexer with a Books category (7000 / 7020) enabled. FastLibrarian uses Prowlarr's API key; no "app sync" setup is needed. |
+| **[qBittorrent](https://www.qbittorrent.org/)** (Web UI enabled) | Downloads the torrents | Web UI login, or the FastLibrarian container's subnet whitelisted under *Bypass authentication*. |
+| **[Calibre-Web Automated](https://github.com/crocodilestick/Calibre-Web-Automated)** (CWA) | Imports finished ebooks into your Calibre library | FastLibrarian copies books into CWA's **ingest folder**, and reads CWA's **Calibre library** (`metadata.db`) to see what you already own. |
+| Internet access to `openlibrary.org` | Book and author metadata | No account or API key needed. |
+
+**Shared folders.** FastLibrarian has to see the same files as the other containers:
+
+- the **download folder** qBittorrent saves to. Mount it at the same path in both containers;
+  otherwise use the path mapping in Settings.
+- CWA's **ingest folder**, read-write.
+- CWA's **library folder**, read-only.
+
+Run all of them with the same `PUID`/`PGID`, so CWA can read and delete the files FastLibrarian
+writes.
+
+**Not supported (yet):** Usenet/NZB, other torrent clients (Transmission, Deluge, …), a library
+without CWA, and audiobooks. See the [roadmap](#roadmap).
+
+FastLibrarian does not provide or point to any content. What you download through your own
+indexers is your responsibility.
+
 ## Run with Docker
 
 ```sh
+git clone https://github.com/olamellberg/fast-librarian.git
+cd fast-librarian
 docker build -t fastlibrarian:local .
 ```
 
-See [`docker/docker-compose.example.yml`](docker/docker-compose.example.yml). Open
-`http://host:8790`, create the admin account, then fill in **Settings**:
+Add the service to your compose file. Use
+[`docker/docker-compose.example.yml`](docker/docker-compose.example.yml) as a template and
+adjust the three volume paths, then run `docker compose up -d fastlibrarian`. Open
+`http://<host>:8790`, create the admin account, then fill in **Settings**:
 
 | Setting | Typical value |
 |---|---|
