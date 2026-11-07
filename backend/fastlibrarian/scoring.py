@@ -73,7 +73,8 @@ def score_release(
         score += 3
         d["retail"] = "+3"
 
-    if _AUDIO.search(name):
+    # Newznab/Torznab category 3000–3999 = Audio (3030 = Audiobook)
+    if _AUDIO.search(name) or any(3000 <= c < 4000 for c in release.categories or []):
         reject = reject or "looks like an audiobook"
     if _PACK.search(name) and not _PACK.search(fold(title)):
         score -= 15

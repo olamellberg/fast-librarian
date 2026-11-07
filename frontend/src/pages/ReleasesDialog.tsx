@@ -1,10 +1,12 @@
 import { Check, Info, Loader2, RotateCw, Users, X } from 'lucide-react'
-import { memo, useId } from 'react'
+import { memo, useId, useState } from 'react'
 import { useGrab, useReleases } from '../api/hooks'
 import type { Book, ScoredRelease } from '../api/types'
 import { Dialog } from '../components/Dialog'
 import { useToast } from '../components/Toast'
 import { errMsg, formatBytes } from '../lib/format'
+
+const isAudiobook = (r: ScoredRelease) => r.reject_reason === 'looks like an audiobook'
 
 export function ReleasesDialog({ book, onClose }: { book: Book | null; onClose: () => void }) {
   const releases = useReleases(book?.id ?? null)
@@ -25,8 +27,12 @@ export function ReleasesDialog({ book, onClose }: { book: Book | null; onClose: 
     )
   }
 
-  const list = releases.data
-  const accepted = list?.filter((r) => r.accepted).length ?? 0
+  const [showAudio, setShowAudio] = useState(false)
+  const all = releases.data
+  const accepted = all?.filter((r) => r.accepted).length ?? 0
+  // Audiobooks are never what you want here; keep them out of the way unless asked for.
+  const audioCount = all?.filter(isAudiobook).length ?? 0
+  const list = all && (showAudio ? all : all.filter((r) => !isAudiobook(r)))
 
   return (
     <Dialog
@@ -63,14 +69,24 @@ export function ReleasesDialog({ book, onClose }: { book: Book | null; onClose: 
         <>
           <div className="mb-3 flex items-center justify-between gap-2 text-sm text-zinc-500 dark:text-zinc-400">
             <span>
-              {list.length} release{list.length === 1 ? '' : 's'} · {accepted} accepted
+              {all!.length} release{all!.length === 1 ? '' : 's'} · {accepted} accepted
+              {audioCount > 0 && (
+                <>
+                  {' · '}
+                  <button type="button" className="underline underline-offset-2 hover:text-zinc-900 dark:hover:text-white" onClick={() => setShowAudio((v) => !v)}>
+                    {showAudio ? 'hide' : 'show'} {audioCount} audiobook{audioCount === 1 ? '' : 's'}
+                  </button>
+                </>
+              )}
             </span>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => void releases.refetch()} disabled={releases.isFetching}>
               <RotateCw className={`size-3.5 ${releases.isFetching ? 'animate-spin' : ''}`} /> Search again
             </button>
           </div>
           {list.length === 0 ? (
-            <p className="py-10 text-center text-sm text-zinc-500">No releases found.</p>
+            <p className="py-10 text-center text-sm text-zinc-500">
+              {all!.length === 0 ? 'No releases found.' : 'Only audiobooks were found.'}
+            </p>
           ) : (
             <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
               {list.map((r) => (

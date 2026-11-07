@@ -54,6 +54,24 @@ _FILLER = {
 # Scene-style group suffix: "...EPUB eBook-BitBook" / "...Retail.ePub-LiBRiCiDE"
 _GROUP_SUFFIX = re.compile(r"(?i)(e-?books?|epub|mobi|azw3|pdf|retail)[-_.]([a-z0-9]+)\s*$")
 _BRACKETS = re.compile(r"[\[({][^\])}]*[\])}]")
+# "Title - The Empyrean (#3) - Author": a dash-separated segment that carries a series number.
+_SEGMENT_SPLIT = re.compile(r"\s+[-–—]\s+")
+_SERIES_MARK = re.compile(r"(?i)#\s*\d|\b(book|bk|vol(ume)?|part|nr|no)\.?\s*\d")
+
+
+def _drop_series_segments(name: str, keep: set[str]) -> str:
+    """Remove dash-separated series segments ("The Empyrean (#3)") unless they hold the title."""
+    parts = _SEGMENT_SPLIT.split(name)
+    if len(parts) < 2:
+        return name
+
+    def is_series(part: str) -> bool:
+        return bool(_SERIES_MARK.search(part)) and not keep <= set(fold(_BRACKETS.sub(" ", part)).split())
+
+    kept = [p for p in parts if not is_series(p)]
+    return " - ".join(kept) if kept else name
+
+
 EXTRA_WORD_PENALTY = 35.0
 
 
@@ -94,6 +112,7 @@ def release_title_score(title: str, author: str, name: str) -> float:
         return 0.0
     keep = set(wanted)
     name = _GROUP_SUFFIX.sub(r"\1", name)
+    name = _drop_series_segments(name, keep)
     name = _BRACKETS.sub(" ", name)
     tokens = _strip_author(fold(name).split(), author, keep)
     rest = [t for t in tokens if t in keep or not (t in _FILLER or t in _ARTICLES or t.isdigit())]

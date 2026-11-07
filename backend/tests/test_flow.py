@@ -56,7 +56,9 @@ async def test_auth_is_required(harness):
     assert (await harness.client.get("/api/health")).status_code == 200
     assert (await harness.client.get("/api/auth/status")).json()["setup_required"] is True
     assert (await harness.client.get("/api/authors")).status_code == 401
-    await harness.client.post("/api/auth/setup", json={"username": "admin", "password": "correct-horse-battery"})
+    await harness.client.post(
+        "/api/auth/setup", json={"username": "admin", "password": "correct-horse-battery"}
+    )
     assert (await harness.client.get("/api/authors")).status_code == 200
     # a second setup is refused, logout locks the API, login opens it again
     r = await harness.client.post("/api/auth/setup", json={"username": "x", "password": "yyyyyyyyy"})
@@ -65,7 +67,9 @@ async def test_auth_is_required(harness):
     assert (await harness.client.get("/api/authors")).status_code == 401
     bad = await harness.client.post("/api/auth/login", json={"username": "admin", "password": "wrong"})
     assert bad.status_code == 401
-    await harness.client.post("/api/auth/login", json={"username": "admin", "password": "correct-horse-battery"})
+    await harness.client.post(
+        "/api/auth/login", json={"username": "admin", "password": "correct-horse-battery"}
+    )
     assert (await harness.client.get("/api/authors")).status_code == 200
 
 

@@ -349,3 +349,41 @@ def test_search_queries_keep_swedish_letters_then_fold():
         "man som hatar kvinnor",
     ]
     assert search_queries("Dune: Deluxe Edition", "Herbert, Frank")[0] == "dune herbert"
+
+
+# Reported by a user (2026-11): the epub was rejected because of the series segment.
+ONYX = [
+    ("Onyx Storm - The Empyrean (#3) - Rebecca Yarros [epub mobi][ebook]", 6, []),
+    (
+        "Onyx Storm (2 of 2) - The Empyrean (#3) - Rebecca Yarros (GraphicAudio) [Dramatized Adaptation] "
+        "[AUDIOBOOK]",
+        572,
+        [],
+    ),
+    ("Onyx Storm - Rebecca Yarros", 540, [3030]),  # audio only recognisable by its category
+]
+
+
+def test_series_segment_does_not_block_the_right_book():
+    kw = {**SCORE_KW, "title": "Onyx Storm", "author": "Rebecca Yarros", "max_size_mb": 1000}
+    scored = [
+        score_release(Release(**{**_rel(n, size_mb=mb).__dict__, "categories": cats}), **kw)
+        for n, mb, cats in ONYX
+    ]
+    ebook, audio_tagged, audio_cat = scored
+    assert ebook.accepted and ebook.details["title"] == 100
+    assert audio_tagged.reject_reason == "looks like an audiobook"
+    assert audio_cat.reject_reason == "looks like an audiobook"
+    assert rank(scored)[0] is ebook
+
+
+@pytest.mark.parametrize(
+    ("title", "name", "ok"),
+    [
+        ("Onyx Storm", "Onyx Storm - The Empyrean (#3) - Rebecca Yarros [epub mobi][ebook]", True),
+        ("Fourth Wing", "Onyx Storm - The Empyrean (#3) - Rebecca Yarros [epub mobi][ebook]", False),
+        ("Fourth Wing", "Rebecca Yarros - Fourth Wing - The Empyrean Book 1 epub", True),
+    ],
+)
+def test_series_segments(title, name, ok):
+    assert (release_title_score(title, "Rebecca Yarros", name) >= 70) is ok

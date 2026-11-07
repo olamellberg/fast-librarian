@@ -93,6 +93,8 @@ async def harness(tmp_path: Path):
 
 @pytest.fixture
 async def logged_in(harness: Harness) -> Harness:
-    r = await harness.client.post("/api/auth/setup", json={"username": "admin", "password": "correct-horse-battery"})
+    r = await harness.client.post(
+        "/api/auth/setup", json={"username": "admin", "password": "correct-horse-battery"}
+    )
     assert r.status_code == 200, r.text
     return harness
