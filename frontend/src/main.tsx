@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { queryClient } from './api/queryClient'
 import { App } from './App'
 import { ToastProvider } from './components/Toast'
+import '@fontsource-variable/schibsted-grotesk'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(

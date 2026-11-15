@@ -25,14 +25,14 @@ export function AuthScreen({ setup }: { setup: boolean }) {
 
   return (
     <div className="flex min-h-dvh items-center justify-center px-4 py-10">
-      <form onSubmit={submit} className="card w-full max-w-sm p-6 shadow-sm sm:p-8">
+      <form onSubmit={submit} className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
           <LogoMark className="size-12" />
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">
+            <h1 className="text-3xl font-extrabold tracking-tight">
               {setup ? 'Welcome to FastLibrarian' : 'Sign in to FastLibrarian'}
             </h1>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-muted">
               {setup ? 'Create the admin account to get started.' : 'Your fast, simple ebook manager.'}
             </p>
           </div>
@@ -56,7 +56,7 @@ export function AuthScreen({ setup }: { setup: boolean }) {
           </div>
           <div>
             <label htmlFor="password" className="label">
-              Password {setup && <span className="font-normal text-zinc-400">(at least 8 characters)</span>}
+              Password {setup && <span className="font-normal text-faint">(at least 8 characters)</span>}
             </label>
             <input
               id="password"
@@ -87,7 +87,7 @@ export function AuthScreen({ setup }: { setup: boolean }) {
             </div>
           )}
           {error && (
-            <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/50 dark:text-red-300">
+            <p role="alert" className="rounded-lg bg-failed/15 px-3 py-2 text-sm text-failed">
               {error}
             </p>
           )}

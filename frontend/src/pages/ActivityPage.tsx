@@ -1,65 +1,66 @@
 import { Download, ListChecks } from 'lucide-react'
 import { memo } from 'react'
+import { Link } from 'react-router-dom'
 import { useActivity } from '../api/hooks'
 import type { ActivityDownload, ActivityJob } from '../api/types'
 import { absTime, errMsg, formatBytes, timeAgo } from '../lib/format'
 
 const DL_STATE: Record<ActivityDownload['state'], string> = {
-  downloading: 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300',
-  completed: 'bg-violet-100 text-violet-800 dark:bg-violet-950/60 dark:text-violet-300',
-  imported: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300',
-  failed: 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300',
+  downloading: 'bg-downloading/15 text-downloading',
+  completed: 'bg-sent/15 text-sent',
+  imported: 'bg-have/15 text-have',
+  failed: 'bg-failed/15 text-failed',
 }
 
 const JOB_STATE: Record<ActivityJob['status'], string> = {
-  pending: 'text-zinc-500 dark:text-zinc-400',
-  running: 'text-sky-600 dark:text-sky-400',
-  done: 'text-emerald-600 dark:text-emerald-400',
-  failed: 'text-red-600 dark:text-red-400',
+  pending: 'text-muted',
+  running: 'text-downloading',
+  done: 'text-have',
+  failed: 'text-failed',
 }
 
 export function ActivityPage() {
   const { data, isPending, isError, error } = useActivity()
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-semibold tracking-tight">Activity</h1>
-      {isError && <p className="text-sm text-red-600 dark:text-red-400">Could not load activity: {errMsg(error)}</p>}
+    <div className="space-y-8 pt-4">
+      <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">Activity</h1>
+      {isError && <p className="text-sm text-failed">Could not load activity: {errMsg(error)}</p>}
 
       <section aria-labelledby="dl-h" className="space-y-3">
-        <h2 id="dl-h" className="flex items-center gap-2 text-sm font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
-          <Download className="size-4" aria-hidden="true" /> Downloads
+        <h2 id="dl-h" className="flex items-center gap-2 text-xl font-bold tracking-tight">
+          <Download className="size-5 text-muted" aria-hidden="true" /> Downloads
         </h2>
         <div className="card overflow-hidden">
           {isPending ? (
             <RowsSkeleton />
           ) : data?.downloads.length ? (
-            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            <ul className="divide-y divide-line">
               {data.downloads.map((d) => (
                 <DownloadRow key={d.id} d={d} />
               ))}
             </ul>
           ) : (
-            <p className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">No downloads yet.</p>
+            <p className="px-4 py-10 text-center text-sm text-muted">No downloads yet.</p>
           )}
         </div>
       </section>
 
       <section aria-labelledby="jobs-h" className="space-y-3">
-        <h2 id="jobs-h" className="flex items-center gap-2 text-sm font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
-          <ListChecks className="size-4" aria-hidden="true" /> Recent jobs
+        <h2 id="jobs-h" className="flex items-center gap-2 text-xl font-bold tracking-tight">
+          <ListChecks className="size-5 text-muted" aria-hidden="true" /> Recent jobs
         </h2>
         <div className="card overflow-hidden">
           {isPending ? (
             <RowsSkeleton />
           ) : data?.jobs.length ? (
-            <ul className="divide-y divide-zinc-100 text-sm dark:divide-zinc-800">
+            <ul className="divide-y divide-line text-sm">
               {data.jobs.map((j) => (
                 <JobRow key={j.id} j={j} />
               ))}
             </ul>
           ) : (
-            <p className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">No jobs yet.</p>
+            <p className="px-4 py-10 text-center text-sm text-muted">No jobs yet.</p>
           )}
         </div>
       </section>
@@ -73,14 +74,16 @@ const DownloadRow = memo(function DownloadRow({ d }: { d: ActivityDownload }) {
     <li className="grid grid-cols-1 gap-x-4 gap-y-1.5 px-4 py-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto]">
       <div className="min-w-0">
         <p className="truncate text-sm font-medium">
-          {d.book_title}{' '}
-          <span className="font-normal text-zinc-500 dark:text-zinc-400">· {d.author_name}</span>
+          <Link to={`/authors/${d.author_id}?book=${d.book_id}`} className="rounded-sm hover:underline">
+            {d.book_title}
+          </Link>{' '}
+          <span className="font-normal text-muted">by {d.author_name}</span>
         </p>
-        <p className="truncate text-xs text-zinc-500 dark:text-zinc-400" title={d.release_title}>
+        <p className="truncate text-xs text-muted" title={d.release_title}>
           {d.release_title}
         </p>
         {d.message && (
-          <p className={`truncate text-xs ${d.state === 'failed' ? 'text-red-600 dark:text-red-400' : 'text-zinc-500 dark:text-zinc-400'}`} title={d.message}>
+          <p className={`truncate text-xs ${d.state === 'failed' ? 'text-failed' : 'text-muted'}`} title={d.message}>
             {d.message}
           </p>
         )}
@@ -88,10 +91,10 @@ const DownloadRow = memo(function DownloadRow({ d }: { d: ActivityDownload }) {
       <div className="flex min-w-0 flex-col justify-center gap-1">
         <div className="flex items-center gap-2 text-xs">
           <span className={`rounded-full px-2 py-0.5 font-medium capitalize ${DL_STATE[d.state]}`}>{d.state}</span>
-          <span className="text-zinc-500 tabular-nums dark:text-zinc-400">{pct}%</span>
+          <span className="text-muted tabular-nums">{pct}%</span>
         </div>
         <div
-          className="h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800"
+          className="h-1.5 overflow-hidden rounded-full bg-white/10"
           role="progressbar"
           aria-valuenow={pct}
           aria-valuemin={0}
@@ -99,12 +102,12 @@ const DownloadRow = memo(function DownloadRow({ d }: { d: ActivityDownload }) {
           aria-label="Progress"
         >
           <div
-            className={`h-full rounded-full transition-[width] duration-500 ${d.state === 'failed' ? 'bg-red-500' : d.state === 'downloading' ? 'bg-sky-500' : 'bg-emerald-500'}`}
+            className={`h-full rounded-full transition-[width] duration-500 ${d.state === 'failed' ? 'bg-failed' : d.state === 'downloading' ? 'bg-downloading' : 'bg-have'}`}
             style={{ width: `${pct}%` }}
           />
         </div>
       </div>
-      <div className="flex items-center gap-3 text-xs text-zinc-500 tabular-nums sm:flex-col sm:items-end sm:justify-center sm:gap-0.5 dark:text-zinc-400">
+      <div className="flex items-center gap-3 text-xs text-muted tabular-nums sm:flex-col sm:items-end sm:justify-center sm:gap-0.5">
         <span title="Score">score {d.score}</span>
         <span>{formatBytes(d.size)}</span>
         <span title={absTime(d.created_at)}>{timeAgo(d.created_at)}</span>
@@ -120,11 +123,11 @@ const JobRow = memo(function JobRow({ j }: { j: ActivityJob }) {
       <span className={`text-xs font-medium ${JOB_STATE[j.status]}`}>
         {j.status === 'pending' && j.attempts > 0 ? 'retrying' : j.status}
       </span>
-      {j.attempts > 1 && <span className="text-xs text-zinc-400">{j.attempts} attempts</span>}
-      <span className="min-w-0 flex-1 basis-40 truncate text-xs text-zinc-500 dark:text-zinc-400" title={j.message ?? undefined}>
+      {j.attempts > 1 && <span className="text-xs text-faint">{j.attempts} attempts</span>}
+      <span className="min-w-0 flex-1 basis-40 truncate text-xs text-muted" title={j.message ?? undefined}>
         {j.message}
       </span>
-      <span className="ml-auto text-xs text-zinc-400 tabular-nums" title={absTime(j.finished_at ?? j.created_at)}>
+      <span className="ml-auto text-xs text-faint tabular-nums" title={absTime(j.finished_at ?? j.created_at)}>
         {timeAgo(j.finished_at ?? j.created_at)}
       </span>
     </li>
@@ -133,7 +136,7 @@ const JobRow = memo(function JobRow({ j }: { j: ActivityJob }) {
 
 function RowsSkeleton() {
   return (
-    <div className="divide-y divide-zinc-100 dark:divide-zinc-800" aria-hidden="true">
+    <div className="divide-y divide-line" aria-hidden="true">
       {Array.from({ length: 4 }, (_, i) => (
         <div key={i} className="space-y-2 px-4 py-3">
           <div className="skeleton h-4 w-1/2" />

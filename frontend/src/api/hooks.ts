@@ -78,13 +78,20 @@ export function useAddAuthor() {
   })
 }
 
-export function useAuthor(id: number) {
+/**
+ * One author with all their books. The author page polls while something is happening;
+ * the Home shelves pass `poll: false` and a long `staleTime` so they only read the shared cache.
+ */
+export function useAuthor(id: number, opts: { enabled?: boolean; poll?: boolean; staleTime?: number } = {}) {
+  const { enabled = true, poll = true, staleTime } = opts
   return useQuery({
     queryKey: ['author', id],
     queryFn: () => api<AuthorDetail>(`/authors/${id}`),
+    enabled,
+    staleTime,
     refetchInterval: (query) => {
       const d = query.state.data
-      if (!d) return false
+      if (!poll || !d) return false
       if (d.refreshing) return 2000
       return d.books.some((b) => isActive(b.status)) ? 5000 : false
     },
@@ -116,11 +123,22 @@ export function useDeleteAuthor() {
       qc.setQueryData<Author[]>(['authors'], (old) => old?.filter((a) => a.id !== id))
       qc.removeQueries({ queryKey: ['author', id] })
       void qc.invalidateQueries({ queryKey: ['search'] })
+      void qc.invalidateQueries({ queryKey: ['books'] })
     },
   })
 }
 
 // ---------------------------------------------------------------- books
+
+/** Books across all authors, most recently changed first. Polls while any of them is on its way in. */
+export function useBooks(statuses: readonly BookStatus[], limit: number) {
+  const qs = [...statuses.map((s) => `status=${s}`), `limit=${limit}`].join('&')
+  return useQuery({
+    queryKey: ['books', qs],
+    queryFn: () => api<Book[]>(`/books?${qs}`),
+    refetchInterval: (query) => (query.state.data?.some((b) => isActive(b.status)) ? 5000 : false),
+  })
+}
 
 export function useAddBook() {
   const qc = useQueryClient()
@@ -137,6 +155,7 @@ export function useAddBook() {
       )
       void qc.invalidateQueries({ queryKey: ['authors'] })
       void qc.invalidateQueries({ queryKey: ['author', book.author_id] })
+      void qc.invalidateQueries({ queryKey: ['books'] })
     },
   })
 }
@@ -172,6 +191,7 @@ export function useBookBulk(authorId: number, action: 'download' | 'unwant') {
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: key })
       void qc.invalidateQueries({ queryKey: ['authors'] })
+      void qc.invalidateQueries({ queryKey: ['books'] })
     },
   })
 }
@@ -195,6 +215,8 @@ export function useGrab(authorId: number) {
       post<{ download_id: number }>(`/books/${v.bookId}/grab`, { release: v.release }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['author', authorId] })
+      void qc.invalidateQueries({ queryKey: ['authors'] })
+      void qc.invalidateQueries({ queryKey: ['books'] })
       void qc.invalidateQueries({ queryKey: ['activity'] })
     },
   })

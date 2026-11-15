@@ -105,6 +105,7 @@ export interface ActivityDownload {
   id: number
   book_id: number
   book_title: string
+  author_id: number
   author_name: string
   release_title: string
   indexer: string | null

@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react'
-import { Link, Route, Routes } from 'react-router-dom'
+import { Link, Navigate, Route, Routes, useSearchParams } from 'react-router-dom'
 import { useAuthStatus } from './api/hooks'
 import { Layout } from './components/Layout'
 import { LogoMark } from './components/Logo'
@@ -7,9 +7,16 @@ import { errMsg } from './lib/format'
 import { ActivityPage } from './pages/ActivityPage'
 import { AuthorPage } from './pages/AuthorPage'
 import { AuthScreen } from './pages/AuthScreen'
+import { HomePage } from './pages/HomePage'
 import { LibraryPage } from './pages/LibraryPage'
 import { SearchPage } from './pages/SearchPage'
 import { SettingsPage } from './pages/SettingsPage'
+
+/** Search used to live at `/?q=`; keep old links and bookmarks working. */
+function Index() {
+  const [params] = useSearchParams()
+  return params.has('q') ? <Navigate replace to={`/search?${params}`} /> : <HomePage />
+}
 
 export function App() {
   const auth = useAuthStatus()
@@ -24,7 +31,7 @@ export function App() {
   if (auth.isError) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-4 text-center">
-        <p className="text-sm text-red-600 dark:text-red-400">Cannot reach the FastLibrarian server: {errMsg(auth.error)}</p>
+        <p className="text-sm text-failed">Cannot reach the FastLibrarian server: {errMsg(auth.error)}</p>
         <button type="button" className="btn btn-secondary" onClick={() => void auth.refetch()}>
           {auth.isFetching && <Loader2 className="size-4 animate-spin" />} Retry
         </button>
@@ -37,7 +44,8 @@ export function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<SearchPage />} />
+        <Route index element={<Index />} />
+        <Route path="search" element={<SearchPage />} />
         <Route path="library" element={<LibraryPage />} />
         <Route path="authors/:id" element={<AuthorPage />} />
         <Route path="activity" element={<ActivityPage />} />
@@ -46,9 +54,9 @@ export function App() {
           path="*"
           element={
             <div className="py-20 text-center">
-              <p className="text-zinc-500">Page not found.</p>
+              <p className="text-muted">There is no page at this address.</p>
               <Link to="/" className="btn btn-secondary mt-4">
-                Go to search
+                Go home
               </Link>
             </div>
           }

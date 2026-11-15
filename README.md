@@ -17,9 +17,13 @@ A fast, simple ebook manager: a ground-up rewrite inspired by
 Nothing is downloaded unless you ask for it.
 
 <p>
-  <img src="docs/screenshot-author.png" alt="Author page with the book list" width="72%">
-  <img src="docs/screenshot-phone.png" alt="Search on a phone" width="24%">
+  <img src="docs/screenshot-author.png" alt="Author page: flick through the covers and pick a book" width="72%">
+  <img src="docs/screenshot-phone.png" alt="Home on a phone: shelves of covers" width="24%">
 </p>
+
+The interface is built around the covers: shelves on the home page, and on an author's page a cover
+flow you swipe through (arrow keys and a scrubber work too), with a list view for selecting many
+books at once.
 
 ### Why a rewrite?
 

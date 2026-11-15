@@ -45,11 +45,11 @@ export function Dialog({
         const r = e.currentTarget.getBoundingClientRect()
         if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) onClose()
       }}
-      className={`m-auto w-[calc(100%-1.5rem)] rounded-2xl bg-white p-0 text-zinc-900 shadow-2xl ring-1 ring-zinc-200 dark:bg-zinc-900 dark:text-zinc-100 dark:ring-zinc-800 ${className}`}
+      className={`m-auto w-[calc(100%-1.5rem)] rounded-2xl bg-raised p-0 text-paper shadow-2xl shadow-black ring-1 ring-white/10 ${className}`}
     >
       {open && (
         <div className="flex max-h-[85dvh] flex-col">
-          <header className="flex items-start justify-between gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+          <header className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
             <h2 id={titleId} className="min-w-0 text-base font-semibold">
               {title}
             </h2>
@@ -59,7 +59,7 @@ export function Dialog({
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">{children}</div>
           {footer && (
-            <footer className="flex flex-wrap justify-end gap-2 border-t border-zinc-200 px-5 py-3 dark:border-zinc-800">
+            <footer className="flex flex-wrap justify-end gap-2 border-t border-line px-5 py-3">
               {footer}
             </footer>
           )}
@@ -103,7 +103,7 @@ export function ConfirmDialog({
         </>
       }
     >
-      <div className="text-sm text-zinc-600 dark:text-zinc-300">{children}</div>
+      <div className="text-sm text-muted">{children}</div>
     </Dialog>
   )
 }

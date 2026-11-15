@@ -79,7 +79,7 @@ function fromForm(f: Form): Settings {
 
 export function SettingsPage() {
   const { data, isPending, isError, error } = useSettings()
-  if (isError) return <p className="text-sm text-red-600 dark:text-red-400">Could not load settings: {errMsg(error)}</p>
+  if (isError) return <p className="text-sm text-failed">Could not load settings: {errMsg(error)}</p>
   if (isPending) return <SettingsSkeleton />
   return <SettingsForm saved={data} />
 }
@@ -140,8 +140,8 @@ function SettingsForm({ saved }: { saved: Settings }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto max-w-3xl space-y-6 pb-24">
-      <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+    <form onSubmit={onSubmit} className="max-w-3xl space-y-6 pt-4 pb-24">
+      <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">Settings</h1>
 
       <Section title="Prowlarr" description="Indexer manager used to search for torrents." test={{ service: 'prowlarr', result: results.prowlarr, run: runTest }}>
         <Field label="URL" id="prowlarr_url">
@@ -202,7 +202,7 @@ function SettingsForm({ saved }: { saved: Settings }) {
         <div className="sm:col-span-2">
           <span className="label">Preferred formats</span>
           <FormatList value={form.preferred_formats} onChange={(v) => set('preferred_formats', v)} />
-          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Best first. Formats not listed are rejected.</p>
+          <p className="mt-1 text-xs text-muted">Best first. Formats not listed are rejected.</p>
         </div>
         <Field label="Languages" id="languages" hint="OpenLibrary 3-letter codes, comma separated (e.g. eng, swe). Empty = all.">
           <input id="languages" className="input" placeholder="All languages" {...text('languages')} />
@@ -233,9 +233,9 @@ function SettingsForm({ saved }: { saved: Settings }) {
         </Field>
       </Section>
 
-      <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 flex items-center justify-end gap-3 sm:bottom-4">
+      <div className="sticky bottom-[calc(var(--tabbar-h)+1rem)] z-10 flex items-center justify-end gap-3">
         {dirty && (
-          <span className="rounded-full bg-white/90 px-3 py-1 text-xs text-zinc-500 shadow-sm ring-1 ring-zinc-200 backdrop-blur dark:bg-zinc-900/90 dark:ring-zinc-800">
+          <span className="rounded-full bg-lift px-3 py-1 text-xs text-muted shadow-lg shadow-black">
             Unsaved changes
           </span>
         )}
@@ -268,8 +268,8 @@ function Section({
     <section className="card p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-semibold">{title}</h2>
-          {description && <p className="text-sm text-zinc-500 dark:text-zinc-400">{description}</p>}
+          <h2 className="text-lg font-bold">{title}</h2>
+          {description && <p className="text-sm text-muted">{description}</p>}
         </div>
         {test && (
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => test.run(test.service)} disabled={r === 'pending'}>
@@ -282,8 +282,8 @@ function Section({
           role="status"
           className={`mb-4 flex items-start gap-2 rounded-lg px-3 py-2 text-sm break-words ${
             r.ok
-              ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300'
-              : 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300'
+              ? 'bg-have/15 text-have'
+              : 'bg-failed/15 text-failed'
           }`}
         >
           {r.ok ? <CheckCircle2 className="mt-0.5 size-4 shrink-0" /> : <XCircle className="mt-0.5 size-4 shrink-0" />}
@@ -302,7 +302,7 @@ function Field({ label, id, hint, children }: { label: string; id: string; hint?
         {label}
       </label>
       {children}
-      {hint && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{hint}</p>}
+      {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
     </div>
   )
 }
@@ -327,9 +327,9 @@ function FormatList({ value, onChange }: { value: string[]; onChange: (v: string
         {value.map((f, i) => (
           <li
             key={f}
-            className="flex items-center gap-0.5 rounded-lg bg-zinc-100 py-0.5 pr-0.5 pl-2.5 text-sm ring-1 ring-zinc-200 dark:bg-zinc-800 dark:ring-zinc-700"
+            className="flex items-center gap-0.5 rounded-lg bg-white/8 py-0.5 pr-0.5 pl-2.5 text-sm"
           >
-            <span className="mr-1 text-xs text-zinc-400 tabular-nums">{i + 1}.</span>
+            <span className="mr-1 text-xs text-faint tabular-nums">{i + 1}.</span>
             <span className="mr-1 font-medium uppercase">{f}</span>
             <button type="button" className="btn btn-ghost p-1" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Move ${f} up`}>
               <ArrowUp className="size-3.5" />
@@ -373,7 +373,7 @@ function FormatList({ value, onChange }: { value: string[]; onChange: (v: string
 
 function SettingsSkeleton() {
   return (
-    <div className="mx-auto max-w-3xl space-y-6" aria-hidden="true">
+    <div className="max-w-3xl space-y-6 pt-4" aria-hidden="true">
       <div className="skeleton h-8 w-40" />
       {Array.from({ length: 3 }, (_, i) => (
         <div key={i} className="card space-y-4 p-5">

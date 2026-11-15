@@ -1,9 +1,30 @@
 @import 'tailwindcss';
 
+/*
+ * Dark only. The chrome is monochrome: black, graphite and paper white.
+ * Colour comes from the book covers and from the five status hues, nothing else.
+ */
 @theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sans: 'Schibsted Grotesk Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --color-ink: #000000;
+  --color-panel: #141414;
+  --color-raised: #1f1f1f;
+  --color-lift: #2a2a2a;
+  --color-line: rgb(255 255 255 / 0.08);
+  --color-paper: #f4f4f1;
+  --color-muted: #a1a1a1;
+  --color-faint: #6e6e6e;
+
+  --color-wanted: #f5b83d;
+  --color-downloading: #5cb8ff;
+  --color-sent: #b79cff;
+  --color-have: #4ade80;
+  --color-failed: #ff6b6b;
+
   --animate-shimmer: shimmer 1.4s ease-in-out infinite;
   --animate-toast-in: toast-in 160ms ease-out;
+  --animate-fade-in: fade-in 700ms ease-out both;
 
   @keyframes shimmer {
     0%,
@@ -24,24 +45,42 @@
       transform: none;
     }
   }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
 }
 
 :root {
-  color-scheme: light dark;
+  color-scheme: dark;
   scrollbar-gutter: stable;
-  --brand-light: var(--color-indigo-600);
-  --brand-dark: var(--color-indigo-400);
-  --brand: var(--brand-light);
-  accent-color: var(--brand);
+  scrollbar-color: var(--color-lift) transparent;
+  accent-color: var(--color-paper);
   -webkit-tap-highlight-color: transparent;
 
-  @media (prefers-color-scheme: dark) {
-    --brand: var(--brand-dark);
+  /* Shared by everything that is fixed to the viewport: the sidebar on desktop, the tab bar on phones. */
+  --sidebar-w: 0px;
+  --tabbar-h: calc(4rem + env(safe-area-inset-bottom));
+  --topbar-h: 4rem;
+  scroll-padding-top: calc(var(--topbar-h) + 1rem);
+
+  @media (min-width: 64rem) {
+    --sidebar-w: 18rem;
+    --tabbar-h: 0px;
   }
 }
 
 body {
-  @apply bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
+  @apply bg-panel font-sans text-paper antialiased;
+}
+
+/* In the base layer so a component (the input has its own ring) can opt out. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-paper);
+    outline-offset: 2px;
+  }
 }
 
 /* Native modal dialogs: keep scroll from chaining to the page behind. */
@@ -51,39 +90,275 @@ dialog:modal {
 dialog::backdrop {
   overflow: hidden;
   overscroll-behavior: contain;
-  background: rgb(0 0 0 / 0.55);
-  backdrop-filter: blur(2px);
+  background: rgb(0 0 0 / 0.7);
+  backdrop-filter: blur(4px);
 }
 
 @layer components {
   .btn {
-    @apply inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition-colors select-none disabled:cursor-not-allowed disabled:opacity-40;
   }
   .btn-sm {
-    @apply px-2.5 py-1.5 text-xs;
+    @apply px-3 py-1.5 text-xs;
+  }
+  .btn-icon {
+    @apply size-9 p-0;
   }
   .btn-primary {
-    @apply bg-indigo-600 text-white hover:bg-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-400;
+    @apply bg-paper text-ink hover:bg-white;
   }
   .btn-secondary {
-    @apply bg-white text-zinc-800 ring-1 ring-zinc-300 ring-inset hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-100 dark:ring-zinc-700 dark:hover:bg-zinc-800;
+    @apply text-paper ring-1 ring-white/25 ring-inset hover:bg-white/5 hover:ring-white/60;
   }
   .btn-ghost {
-    @apply text-zinc-600 hover:bg-zinc-200/70 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100;
+    @apply text-muted hover:bg-white/10 hover:text-paper;
   }
   .btn-danger {
-    @apply bg-red-600 text-white hover:bg-red-500;
+    @apply bg-failed text-ink hover:brightness-110;
   }
   .input {
-    @apply w-full rounded-lg border-0 bg-white px-3 py-2 text-sm text-zinc-900 ring-1 ring-zinc-300 ring-inset placeholder:text-zinc-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none dark:bg-zinc-900 dark:text-zinc-100 dark:ring-zinc-700 dark:placeholder:text-zinc-500;
+    @apply w-full rounded-lg border-0 bg-raised px-3 py-2 text-sm text-paper ring-1 ring-white/10 ring-inset placeholder:text-faint hover:ring-white/20 focus:ring-2 focus:ring-paper focus:outline-none;
   }
   .card {
-    @apply rounded-xl bg-white ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-800;
+    @apply rounded-xl bg-raised;
+  }
+  /* A field on a card needs to be darker than the card to read as a well. */
+  .card .input {
+    @apply bg-panel;
   }
   .skeleton {
-    @apply animate-shimmer rounded-md bg-zinc-200 dark:bg-zinc-800;
+    @apply animate-shimmer rounded-md bg-white/8;
   }
   .label {
-    @apply mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400;
+    @apply mb-1 block text-xs font-medium text-muted;
   }
+  /* Filter chip: a toggle that is either on (paper) or off (graphite). */
+  .chip {
+    @apply inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-white/8 px-3.5 py-1.5 text-sm font-medium whitespace-nowrap text-paper transition-colors select-none hover:bg-white/14;
+  }
+  .chip[aria-selected='true'] {
+    @apply bg-paper text-ink;
+  }
+  /* One option of a segmented switch (the options share a graphite pill). */
+  .seg {
+    @apply inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium whitespace-nowrap text-muted transition-colors select-none hover:text-paper;
+  }
+  .seg[aria-pressed='true'] {
+    @apply bg-paper text-ink;
+  }
+}
+
+/* ------------------------------------------------------------------ top bar
+ * Solid by default. Where the browser can tie it to the scroll position it starts clear, so a page
+ * with an ambient backdrop runs all the way to the top, and fills in as soon as content slides under it. */
+.topbar {
+  background-color: rgb(20 20 20 / 0.88);
+  backdrop-filter: blur(24px);
+}
+@keyframes topbar-fill {
+  from {
+    background-color: rgb(20 20 20 / 0);
+    backdrop-filter: blur(0);
+  }
+}
+@supports ((animation-timeline: scroll()) and (animation-range: 0px 1px)) {
+  .topbar {
+    animation: topbar-fill linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 0px 5rem;
+  }
+}
+
+/* ------------------------------------------------------------------ reveal on hover
+ * Card actions are always visible on touch devices and only tuck away where hovering exists. */
+.reveal {
+  transition:
+    opacity 150ms ease-out,
+    translate 150ms ease-out;
+}
+@media (hover: hover) {
+  .reveal {
+    opacity: 0;
+    translate: 0 6px;
+  }
+  .group:hover .reveal,
+  .group:focus-within .reveal {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* ------------------------------------------------------------------ shelves */
+.shelf-track {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  --fade: 2.5rem;
+  --fade-start: 0px;
+  --fade-end: 0px;
+  /* Cards must never come to rest inside a faded edge. */
+  scroll-padding-inline: var(--shelf-pad, 1rem);
+  padding-inline: var(--shelf-pad, 1rem);
+  margin-inline: calc(var(--shelf-pad, 1rem) * -1);
+  mask-image:
+    linear-gradient(to right, transparent, black var(--fade-start)),
+    linear-gradient(to left, transparent, black var(--fade-end));
+  mask-composite: intersect;
+}
+.shelf-track::-webkit-scrollbar {
+  display: none;
+}
+/* The scrollbar is hidden, so the fade is the cue that there is more in that direction. */
+.shelf-track[data-more-start] {
+  --fade-start: var(--fade);
+}
+.shelf-track[data-more-end] {
+  --fade-end: var(--fade);
+}
+.shelf-track > * {
+  flex: none;
+  scroll-snap-align: start;
+}
+
+/* ------------------------------------------------------------------ cover flow */
+.cf {
+  --cf-w: clamp(9rem, 44vw, 13.5rem);
+  --cf-gap: clamp(0.5rem, 2vw, 1.25rem);
+  isolation: isolate;
+}
+.cf-track {
+  display: flex;
+  gap: var(--cf-gap);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  touch-action: pan-x pan-y;
+  /* Lets the first and the last cover reach the centre. */
+  padding-inline: calc(50% - var(--cf-w) / 2);
+  padding-block: 1.75rem 2.25rem;
+}
+.cf-track::-webkit-scrollbar {
+  display: none;
+}
+/* Keyboard focus is shown on the cover you are on, not as a box around the whole row. */
+.cf-track:focus-visible {
+  outline: none;
+}
+.cf-track:focus-visible .cf-item[aria-current='true'] .cf-cover {
+  outline: 2px solid var(--color-paper);
+  outline-offset: 5px;
+  border-radius: 0.5rem;
+}
+.cf-item {
+  flex: none;
+  width: var(--cf-w);
+  aspect-ratio: 2 / 3;
+  scroll-snap-align: center;
+  perspective: 50rem;
+  cursor: pointer;
+}
+/* Baseline, works everywhere: only the centred cover is at full size. */
+.cf-cover {
+  scale: 0.8;
+  opacity: 0.45;
+  transition:
+    scale 220ms ease-out,
+    opacity 220ms ease-out;
+}
+.cf-item[aria-current='true'] {
+  cursor: default;
+}
+.cf-item[aria-current='true'] .cf-cover {
+  scale: 1;
+  opacity: 1;
+}
+
+@keyframes cf-flow {
+  0% {
+    scale: 0.62;
+    rotate: y 52deg;
+    opacity: 0.2;
+  }
+  34% {
+    scale: 0.78;
+    rotate: y 38deg;
+    opacity: 0.55;
+  }
+  50% {
+    scale: 1;
+    rotate: y 0deg;
+    opacity: 1;
+  }
+  66% {
+    scale: 0.78;
+    rotate: y -38deg;
+    opacity: 0.55;
+  }
+  100% {
+    scale: 0.62;
+    rotate: y -52deg;
+    opacity: 0.2;
+  }
+}
+
+/* Enhancement: every cover turns and shrinks continuously with the scroll position. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports ((animation-timeline: view()) and (animation-range: entry)) {
+    /* The timeline sits on the untransformed item so the animated cover cannot feed back into it. */
+    .cf-item {
+      view-timeline: --cf-item inline;
+    }
+    .cf-item .cf-cover,
+    .cf-item[aria-current='true'] .cf-cover {
+      transition: none;
+      animation: cf-flow linear both;
+      animation-timeline: --cf-item;
+      /* Three covers either side of the centre, whatever the width of the page. */
+      animation-range: cover calc(50% - (var(--cf-w) + var(--cf-gap)) * 3) cover
+        calc(50% + (var(--cf-w) + var(--cf-gap)) * 3);
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cf-cover {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------------ scrubber (range input) */
+.scrubber {
+  appearance: none;
+  height: 1.25rem;
+  background: transparent;
+  cursor: pointer;
+  accent-color: var(--color-paper);
+}
+.scrubber::-webkit-slider-runnable-track {
+  height: 0.25rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.18);
+}
+.scrubber::-moz-range-track {
+  height: 0.25rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.18);
+}
+.scrubber::-webkit-slider-thumb {
+  appearance: none;
+  width: 0.875rem;
+  height: 0.875rem;
+  margin-top: -0.3125rem;
+  border-radius: 999px;
+  background: var(--color-paper);
+}
+.scrubber::-moz-range-thumb {
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-paper);
 }
